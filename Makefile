@@ -10,7 +10,7 @@ LIBS=
 _DEPS = lexer.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = kaleidoscope.o lexer.o
+_OBJ = kaleidoscope.o lexer.o parser.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
