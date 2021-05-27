@@ -1,10 +1,4 @@
-#include <cctype>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "lexer.h"
+#include "parser.h"
 
 /**
  * Scafolding
@@ -14,6 +8,10 @@
 class ExprAST {
    public:
     virtual ~ExprAST() {}
+
+    virtual std::string pprint() {
+        return std::string("Base ExprAST Class\n");
+    };
 };
 
 class NumberExprAST : public ExprAST {
@@ -21,6 +19,8 @@ class NumberExprAST : public ExprAST {
 
    public:
     NumberExprAST(double Val) : Val(Val) {}
+
+    std::string pprint() { return std::string(std::to_string(Val)); }
 };
 
 class VariableExprAST : public ExprAST {
@@ -28,6 +28,8 @@ class VariableExprAST : public ExprAST {
 
    public:
     VariableExprAST(std::string &Name) : Name(Name) {}
+
+    std::string pprint() { return std::string(Name); }
 };
 
 class BinaryExprAST : public ExprAST {
@@ -38,6 +40,11 @@ class BinaryExprAST : public ExprAST {
     BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
                   std::unique_ptr<ExprAST> RHS)
         : op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+
+    std::string pprint() {
+        return "(" + LHS->pprint() + " " + std::string(1, op) + " " +
+               RHS->pprint() + ")";
+    }
 };
 
 class CallExprAST : public ExprAST {
@@ -48,6 +55,15 @@ class CallExprAST : public ExprAST {
     CallExprAST(const std::string &Callee,
                 std::vector<std::unique_ptr<ExprAST>> Args)
         : Callee(Callee), Args(std::move(Args)) {}
+
+    std::string pprint() {
+        std::string ret = "(call: " + Callee;
+        for (auto &it : Args) {
+            ret += " " + it->pprint();
+        }
+        ret += ")";
+        return ret;
+    }
 };
 
 /* Prototypes */
@@ -58,6 +74,14 @@ class PrototypeAST {
    public:
     PrototypeAST(const std::string &name, std::vector<std::string> Args)
         : Name(name), Args(std::move(Args)) {}
+
+    std::string pprint() {
+        std::string ret = "prototype: " + Name;
+        for (auto &it : Args) {
+            ret += " " + it;
+        }
+        return ret;
+    }
 };
 
 class FunctionAST {
@@ -68,6 +92,10 @@ class FunctionAST {
     FunctionAST(std::unique_ptr<PrototypeAST> Proto,
                 std::unique_ptr<ExprAST> Body)
         : Proto(std::move(Proto)), Body(std::move(Body)) {}
+
+    std::string pprint() {
+        return "function def " + Proto->pprint() + "\n" + Body->pprint();
+    }
 };
 
 /**
@@ -87,6 +115,7 @@ std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
     return nullptr;
 }
 
+/* Expression parsing */
 static std::unique_ptr<ExprAST> parseNumberExpr() {
     auto result = std::make_unique<NumberExprAST>(TokenNum);
     getToken();
@@ -218,5 +247,94 @@ static std::unique_ptr<ExprAST> parseBinOpRHS(int exprPrec,
 
         LHS = std::make_unique<BinaryExprAST>(binOp, std::move(LHS),
                                               std::move(RHS));
+    }
+}
+
+/* Function Definition Parsing */
+static std::unique_ptr<PrototypeAST> parsePrototype() {
+    if (CurTok != tokIdentifier) {
+        return LogErrorP("Expected function name in prototype");
+    }
+
+    auto fnName = TokenIdentifier;
+    getToken();
+
+    if (CurTok != '(') {
+        return LogErrorP("Expected '(' in prototype");
+    }
+
+    std::vector<std::string> argNames;
+    while (getToken() == tokIdentifier) {
+        argNames.push_back(TokenIdentifier);
+    }
+
+    if (CurTok != ')') {
+        return LogErrorP("Expected ')' in prototype");
+    }
+
+    getToken();
+
+    return std::make_unique<PrototypeAST>(fnName, std::move(argNames));
+}
+
+static std::unique_ptr<FunctionAST> parseDefinition() {
+    getToken();
+    auto proto = parsePrototype();
+    if (!proto) {
+        return nullptr;
+    }
+
+    if (auto expr = parseExpr()) {
+        return std::make_unique<FunctionAST>(std::move(proto), std::move(expr));
+    }
+    return nullptr;
+}
+
+/* Extern standard library calls */
+static std::unique_ptr<PrototypeAST> parseExtern() {
+    getToken();
+    return parsePrototype();
+}
+
+/* Create an anonymous function for top level expressions */
+static std::unique_ptr<FunctionAST> parseTopLevelExpr() {
+    if (auto expr = parseExpr()) {
+        auto proto =
+            std::make_unique<PrototypeAST>("", std::vector<std::string>());
+        return std::make_unique<FunctionAST>(std::move(proto), std::move(expr));
+    }
+
+    return nullptr;
+}
+
+/* Top ::= Defintion | External | Expression | ';' */
+void parse(bool interpret) {
+    if (interpret) {
+        fprintf(stderr, "kaliedoscope> ");
+    }
+
+    getToken();
+
+    while (true) {
+        switch (CurTok) {
+            case tokEOF:
+                return;
+            case ';':
+                getToken();
+                break;
+            case tokDef:
+                std::cout << parseDefinition()->pprint() << "\n";
+                break;
+            case tokExtern:
+                std::cout << parseExtern()->pprint() << "\n";
+                break;
+            default:
+                std::cout << parseTopLevelExpr()->pprint() << "\n";
+                break;
+        }
+
+        if (interpret and CurTok != tokEOF) {
+            fprintf(stderr, "kaliedoscope> ");
+        }
     }
 }

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "lexer.h"
+#include "parser.h"
 
 void printTokens() {
     while (true) {
@@ -8,27 +9,36 @@ void printTokens() {
 
         switch (tokenType) {
             case tokEOF:
-                std::cout << "EOF\n";
+                std::cout << "EOF";
                 return;
             case tokDef:
-                std::cout << "def\n";
+                std::cout << "def";
                 break;
             case tokExtern:
-                std::cout << "extern\n";
+                std::cout << "extern";
                 break;
             case tokIdentifier:
-                std::cout << TokenIdentifier << "\n";
+                std::cout << TokenIdentifier;
                 break;
             case tokNum:
-                std::cout << TokenNum << "\n";
+                std::cout << TokenNum;
                 break;
             default:
-                std::cout << (char)tokenType << "\n";
+                std::cout << (char)tokenType;
         }
+
+        std::cout << " --> " << tokenType << "\n";
     }
 }
 
+void interpreter(bool interpret) { parse(interpret); }
+
 int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        interpreter(true);
+        return 0;
+    }
+
     if (argc != 2) {
         std::cerr << "Usage: ./kaleidoscope <file>\n";
         return 1;
@@ -36,5 +46,5 @@ int main(int argc, char *argv[]) {
 
     std::freopen(argv[1], "r", stdin);
 
-    printTokens();
+    interpreter(false);
 }

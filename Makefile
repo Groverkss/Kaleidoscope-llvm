@@ -7,7 +7,7 @@ ODIR=obj
 
 LIBS=
 
-_DEPS = lexer.h
+_DEPS = lexer.h parser.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _OBJ = kaleidoscope.o lexer.o parser.o

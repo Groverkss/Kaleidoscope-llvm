@@ -17,6 +17,14 @@ int getNextToken() {
             lastChar = getchar();
         }
 
+        if (TokenIdentifier == "def") {
+            return tokDef;
+        }
+
+        if (TokenIdentifier == "extern") {
+            return tokExtern;
+        }
+
         return tokIdentifier;
     }
 
