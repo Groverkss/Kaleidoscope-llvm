@@ -2,9 +2,9 @@
 
 ##Chapter 1 : Lexer
 
-                  The language : Kaleidoscope.
+The language : Kaleidoscope.
 
-                                 Some examples from LLVM tutorial :
+Some examples from LLVM tutorial :
 
 ```
 #Compute the x'th fibonacci number.
